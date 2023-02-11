@@ -1487,6 +1487,37 @@ int wlink_init(void)
 			LOG_WARNING(" The debug interface has been opened,there is a risk of code leakage ,ensure that the debug interface has been closed before leaving factory !");
 			break;
 		}
+		case 9:  /** CH32V003 */
+		{
+			riscvchip = 0x09;
+			chipiaddr = 0x08000000;
+			pagesize = 128;
+			txbuf[0] = 0x81;
+			txbuf[1] = 0x0d;
+			txbuf[2] = 0x01;
+			txbuf[3] = 0x03;
+			len = 4;
+			pWriteData(0, 1, txbuf, &len);
+			len = 4;
+			if(pReadData(0, 1, rxbuf, &len)){
+				uint8_t oAddr;
+				uint32_t oData;
+				uint8_t oOP;
+				// write zero to address 0x10
+				DMI_OP(0, 0x10, 0x00000000, 2, &oAddr, &oData, &oOP);
+				// write one to address 0x10
+				DMI_OP(0, 0x10, 0x00000001, 2, &oAddr, &oData, &oOP);
+				// read from address 0x10
+				DMI_OP(0, 0x10, 0x00000000, 1, &oAddr, &oData, &oOP);
+				if(oData != 0x00000001) {
+					LOG_WARNING("Error, cannot write to the memory. Is write protect on?");
+					break;
+				}
+				usleep(1000);
+				wlink_reset();
+			}
+			break;
+		}		
 		default:
 			LOG_ERROR(" communication fail,please contact [support@mounriver.com]");
 			return ERROR_FAIL;
